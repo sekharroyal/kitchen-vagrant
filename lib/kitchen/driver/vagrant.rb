@@ -333,11 +333,20 @@ module Kitchen
            RUBYOPT _ORIGINAL_GEM_PATH].each do |var|
           env[var] = nil
         end
-        gem_home = ENV["GEM_HOME"]
-        if gem_home && (env["PATH"] || ENV["PATH"])
-          env["PATH"] ||= ENV["PATH"].dup if ENV["PATH"]
-          gem_bin = File.join(gem_home, "bin") + File::PATH_SEPARATOR
-          env["PATH"][gem_bin] = "" if env["PATH"].include?(gem_bin)
+
+        # Altering the path seems to break vagrant. When the :environment
+        # is passed to a windows process with a PATH, Vagrant's batch
+        # installer (https://github.com/mitchellh/vagrant-installers/blob/master/substrate/modules/vagrant_installer/templates/windows_vagrant.bat.erb)
+        # does not efectively prepend the vagrant ruby path in a persistent manner
+        # which causes vagrant to use the same ruby as test-kitchen and then
+        # the environment is essentially corrupted leading to many errors and dispair
+        unless RbConfig::CONFIG["host_os"] =~ /mswin|mingw/
+          gem_home = ENV["GEM_HOME"]
+          if gem_home && (env["PATH"] || ENV["PATH"])
+            env["PATH"] ||= ENV["PATH"].dup if ENV["PATH"]
+            gem_bin = File.join(gem_home, "bin") + File::PATH_SEPARATOR
+            env["PATH"][gem_bin] = "" if env["PATH"].include?(gem_bin)
+          end
         end
 
         super(cmd, merged)
